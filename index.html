@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>不動産CFクイック判定</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #0f172a;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      --a-bg: #dcfce7; --a-text: #15803d;
+      --b-bg: #e0f2fe; --b-text: #0369a1;
+      --c-bg: #fef3c7; --c-text: #b45309;
+      --d-bg: #ffe4e6; --d-text: #be123c;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 18px 14px 48px;
+    }
+    .header, .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+    .header {
+      padding: 18px;
+      margin-bottom: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .icon {
+      width: 44px; height: 44px;
+      border-radius: 16px;
+      background: var(--primary);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      flex: none;
+    }
+    h1 { font-size: 18px; margin: 0 0 3px; }
+    .sub { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 4px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 8px;
+      z-index: 10;
+    }
+    .tab-btn {
+      border: 0;
+      background: transparent;
+      border-radius: 14px;
+      padding: 10px 8px;
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .tab-btn.active { background: var(--primary); color: white; }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .card { padding: 16px; margin-bottom: 14px; }
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    h2 { margin: 0; font-size: 16px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .field { margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
+    .control { display: flex; align-items: center; gap: 7px; }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 16px;
+      background: white;
+      color: var(--text);
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,.18); }
+    .unit { width: 38px; color: var(--muted); font-size: 13px; }
+    .btn {
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 14px;
+      padding: 9px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .details-toggle {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      text-align: left;
+    }
+    .advanced { display: none; margin-top: 14px; }
+    .advanced.open { display: block; }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .metric-title { font-size: 12px; color: var(--muted); margin: 0 0 4px; }
+    .metric-value { font-size: 22px; font-weight: 900; letter-spacing: -0.02em; margin: 0; }
+    .metric-sub { color: var(--muted); font-size: 12px; margin: 4px 0 0; line-height: 1.45; }
+    .grade {
+      min-width: 34px; height: 34px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      flex: none;
+    }
+    .grade.A { background: var(--a-bg); color: var(--a-text); }
+    .grade.B { background: var(--b-bg); color: var(--b-text); }
+    .grade.C { background: var(--c-bg); color: var(--c-text); }
+    .grade.D { background: var(--d-bg); color: var(--d-text); }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      font-size: 14px;
+    }
+    .info-grid .label, .row .label { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+    .info-grid .value, .row .value { font-weight: 900; }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid #f1f5f9;
+      padding: 10px 0;
+      font-size: 14px;
+    }
+    .row:last-child { border-bottom: 0; }
+    .note {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 13px;
+      margin: 0;
+    }
+    .warn {
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+    .small { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    @media (max-width: 360px) {
+      .grid3 { grid-template-columns: 1fr; }
+      .grid2 { grid-template-columns: 1fr; }
+      .metric-value { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="icon">CF</div>
+      <div>
+        <h1>不動産CFクイック判定</h1>
+        <p class="sub">初年キャッシュフロー・CCR・返済比率・CF率をスマホで確認</p>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="input">入力</button>
+      <button class="tab-btn" data-tab="result">結果</button>
+      <button class="tab-btn" data-tab="detail">内訳</button>
+    </nav>
+
+    <section id="input" class="tab active">
+      <div class="card">
+        <div class="section-title">
+          <h2>必須項目</h2>
+          <button class="btn" id="sampleBtn">サンプル</button>
+        </div>
+
+        <div class="field">
+          <label>物件価格</label>
+          <div class="control"><input id="priceMan" type="number" inputmode="decimal" value="5000"><span class="unit">万円</span></div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>表面利回り</label>
+            <div class="control"><input id="grossYield" type="number" inputmode="decimal" value="6" step="0.1"><span class="unit">%</span></div>
+          </div>
+          <div class="field">
+            <label>融資割合</label>
+            <div class="control"><input id="loanRatio" type="number" inputmode="decimal" value="90"><span class="unit">%</span></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>構造</label>
+          <select id="structure">
+            <option value="wood">木造</option>
+            <option value="lightSteel">軽量鉄骨（推定）</option>
+            <option value="heavySteel">重量鉄骨（推定）</option>
+            <option value="rc">RC</option>
+            <option value="src">SRC</option>
+          </select>
+        </div>
+
+        <div class="grid3">
+          <div class="field">
+            <label>築年</label>
+            <div class="control"><input id="buildYear" type="number" inputmode="numeric" value="2006"><span class="unit">年</span></div>
+          </div>
+          <div class="field">
+            <label>築月</label>
+            <div class="control"><input id="buildMonth" type="number" inputmode="numeric" value="5"><span class="unit">月</span></div>
+          </div>
+          <div class="field">
+            <label>建物面積</label>
+            <div class="control"><input id="buildingAreaSqm" type="number" inputmode="decimal" value="150"><span class="unit">㎡</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <button class="details-toggle" id="advancedToggle">
+          <div>
+            <h2>詳細前提</h2>
+            <p class="sub">管理費・空室率・修繕費などを調整</p>
+          </div>
+          <strong id="toggleMark">＋</strong>
+        </button>
+
+        <div class="advanced" id="advanced">
+          <div class="grid2">
+            <div class="field"><label>金利</label><div class="control"><input id="interestRate" type="number" value="2" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>諸費用率</label><div class="control"><input id="costRatio" type="number" value="7" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>貸室空室率</label><div class="control"><input id="vacancyRate" type="number" value="5" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>賃貸管理料率</label><div class="control"><input id="propertyMgmtFeeRate" type="number" value="5.5" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>建物管理 坪/月</label><div class="control"><input id="buildingMgmtTsuboMonthly" type="number" value="200"><span class="unit">円</span></div></div>
+            <div class="field"><label>水光熱 坪/月</label><div class="control"><input id="utilityTsuboMonthly" type="number" value="50"><span class="unit">円</span></div></div>
+            <div class="field"><label>建築費 坪単価</label><div class="control"><input id="constructionCostTsubo" type="number" value="550000"><span class="unit">円</span></div></div>
+            <div class="field"><label>保険掛率</label><div class="control"><input id="insuranceRate" type="number" value="0.3" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>固都税率</label><div class="control"><input id="propertyTaxRate" type="number" value="10" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>修繕費掛率</label><div class="control"><input id="repairRate" type="number" value="0.5" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>原状回復 坪単価</label><div class="control"><input id="restorationTsubo" type="number" value="10000"><span class="unit">円</span></div></div>
+            <div class="field"><label>回転率</label><div class="control"><input id="turnoverRate" type="number" value="25" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>募集AD</label><div class="control"><input id="adMonths" type="number" value="1" step="0.1"><span class="unit">ヶ月</span></div></div>
+            <div class="field"><label>その他費用</label><div class="control"><input id="otherCost" type="number" value="0"><span class="unit">円</span></div></div>
+            <div class="field"><label>税率</label><div class="control"><input id="taxRate" type="number" value="20" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>建物割合</label><div class="control"><input id="buildingRatio" type="number" value="70" step="0.1"><span class="unit">%</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="result" class="tab">
+      <div class="card metric"><div><p class="metric-title">キャッシュフロー</p><p class="metric-value" id="cf"></p><p class="metric-sub">年間純収益 − 年間返済額</p></div><div class="grade" id="cfGrade"></div></div>
+      <div class="card metric"><div><p class="metric-title">CCR（自己資金利回り）</p><p class="metric-value" id="ccr"></p><p class="metric-sub" id="selfFund"></p></div><div class="grade" id="ccrGrade"></div></div>
+      <div class="card metric"><div><p class="metric-title">返済比率</p><p class="metric-value" id="repaymentRatio"></p><p class="metric-sub">年間返済額 ÷ 賃貸収入</p></div><div class="grade" id="repaymentGrade"></div></div>
+      <div class="card metric"><div><p class="metric-title">キャッシュフロー率</p><p class="metric-value" id="cfRate"></p><p class="metric-sub">CF ÷ 物件価格</p></div><div class="grade" id="cfRateGrade"></div></div>
+
+      <div class="card warn">
+        <p class="note">返済比率は50%以下でA、65%超でD。CF率は2%以上でA、1%未満でD。CCRは20%以上でA、10%未満でD。</p>
+      </div>
+
+      <div class="card info-grid">
+        <div><div class="label">物件価格</div><div class="value" id="priceInfo"></div></div>
+        <div><div class="label">借入金額</div><div class="value" id="loanInfo"></div></div>
+        <div><div class="label">築年数</div><div class="value" id="ageInfo"></div></div>
+        <div><div class="label">残存耐用年数</div><div class="value" id="remainingInfo"></div></div>
+        <div><div class="label">返済期間</div><div class="value" id="loanYearsInfo"></div></div>
+        <div><div class="label">構造</div><div class="value" id="structureInfo"></div></div>
+        <div><div class="label">有効率</div><div class="value" id="effectiveInfo"></div></div>
+        <div><div class="label">賃貸可能面積</div><div class="value" id="rentableAreaInfo"></div></div>
+        <div><div class="label">CF3%目標まで</div><div class="value" id="cf3TargetInfo"></div></div>
+      </div>
+    </section>
+
+    <section id="detail" class="tab">
+      <div class="card">
+        <h2>ローン</h2>
+        <div class="row"><span class="label">返済金額（月）</span><span class="value" id="monthlyDebt"></span></div>
+        <div class="row"><span class="label">返済金額（年）</span><span class="value" id="annualDebt"></span></div>
+        <div class="row"><span class="label">総返済金額</span><span class="value" id="totalDebt"></span></div>
+      </div>
+
+      <div class="card">
+        <h2>収益</h2>
+        <div class="row"><span class="label">実質利回り</span><span class="value" id="actualYield"></span></div>
+        <div class="row"><span class="label">年間純収益</span><span class="value" id="noi"></span></div>
+        <div class="row"><span class="label">月間純収益</span><span class="value" id="monthlyNoi"></span></div>
+        <div class="row"><span class="label">満室賃料</span><span class="value" id="fullRent"></span></div>
+        <div class="row"><span class="label">賃貸収入</span><span class="value" id="rentIncome"></span></div>
+        <div class="row"><span class="label">空室損失</span><span class="value" id="vacancyLoss"></span></div>
+        <div class="row"><span class="label">月額賃料坪単価</span><span class="value" id="monthlyRentTsubo"></span></div>
+      </div>
+
+      <div class="card">
+        <h2>費用</h2>
+        <div class="row"><span class="label">支出合計</span><span class="value" id="totalCost"></span></div>
+        <div class="row"><span class="label">賃貸管理費</span><span class="value" id="propertyMgmtFee"></span></div>
+        <div class="row"><span class="label">建物管理費</span><span class="value" id="buildingMgmtFee"></span></div>
+        <div class="row"><span class="label">共用部水光熱費</span><span class="value" id="utilityFee"></span></div>
+        <div class="row"><span class="label">災害保険</span><span class="value" id="insurance"></span></div>
+        <div class="row"><span class="label">固定資産税・都市計画税</span><span class="value" id="propertyTax"></span></div>
+        <div class="row"><span class="label">修繕費</span><span class="value" id="repair"></span></div>
+        <div class="row"><span class="label">原状回復費</span><span class="value" id="restoration"></span></div>
+        <div class="row"><span class="label">募集経費</span><span class="value" id="adCost"></span></div>
+        <div class="row"><span class="label">その他</span><span class="value" id="otherCostOut"></span></div>
+      </div>
+
+      <div class="card">
+        <h2>税金参考</h2>
+        <div class="row"><span class="label">土地</span><span class="value" id="landValue"></span></div>
+        <div class="row"><span class="label">建物</span><span class="value" id="buildingValue"></span></div>
+        <div class="row"><span class="label">償却年数</span><span class="value" id="depreciationYears"></span></div>
+        <div class="row"><span class="label">単年減価償却</span><span class="value" id="depreciation"></span></div>
+        <div class="row"><span class="label">減価償却後純収益</span><span class="value" id="taxableIncomeAfterDep"></span></div>
+        <div class="row"><span class="label">税引き後利益</span><span class="value" id="afterTaxProfit"></span></div>
+        <p class="small">※元サイトの「税引き後CF」はサンプル上NaN表示のため、このアプリでは参考表示に留めています。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STRUCTURE_RULES = {
+      wood: { label: "木造", loanBaseYears: 30, effectiveRate: 100, constructionCostTsubo: 550000 },
+      lightSteel: { label: "軽量鉄骨（推定）", loanBaseYears: 19, effectiveRate: 100, constructionCostTsubo: 720000 },
+      heavySteel: { label: "重量鉄骨（推定）", loanBaseYears: 34, effectiveRate: 80, constructionCostTsubo: 760000 },
+      rc: { label: "RC", loanBaseYears: 47, effectiveRate: 80, constructionCostTsubo: 760000 },
+      src: { label: "SRC", loanBaseYears: 47, effectiveRate: 80, constructionCostTsubo: 760000 },
+    };
+
+    const ids = [
+      "priceMan","loanRatio","grossYield","structure","buildYear","buildMonth","buildingAreaSqm","interestRate","costRatio","vacancyRate",
+      "propertyMgmtFeeRate","buildingMgmtTsuboMonthly","utilityTsuboMonthly","constructionCostTsubo","insuranceRate","propertyTaxRate","repairRate",
+      "restorationTsubo","turnoverRate","adMonths","otherCost","taxRate","buildingRatio"
+    ];
+
+    function el(id) { return document.getElementById(id); }
+    function num(id, fallback = 0) {
+      const n = Number(el(id).value);
+      return Number.isFinite(n) ? n : fallback;
+    }
+    function fmtYen(value) {
+      if (!Number.isFinite(value)) return "-";
+      return Math.round(value).toLocaleString("ja-JP") + "円";
+    }
+    function fmtMan(value) {
+      if (!Number.isFinite(value)) return "-";
+      return Math.round(value / 10000).toLocaleString("ja-JP") + "万円";
+    }
+    function fmtPct(value, digits = 2) {
+      if (!Number.isFinite(value)) return "-";
+      return value.toFixed(digits) + "%";
+    }
+    function getFiscalAge(buildYear, buildMonth, now = new Date()) {
+      if (!buildYear || !buildMonth) return 0;
+      return Math.max(0, now.getFullYear() - buildYear + 1);
+    }
+    function monthlyPayment(principal, annualRatePct, years) {
+      const months = Math.max(1, Math.round(years * 12));
+      const r = annualRatePct / 100 / 12;
+      if (Math.abs(r) < 1e-12) return principal / months;
+      return principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1);
+    }
+    function gradeCCR(v) {
+      if (v >= 20) return "A";
+      if (v >= 15) return "B";
+      if (v >= 10) return "C";
+      return "D";
+    }
+    function gradeRepayment(v) {
+      if (v <= 50) return "A";
+      if (v <= 60) return "B";
+      if (v <= 65) return "C";
+      return "D";
+    }
+    function gradeCFRate(v) {
+      if (v >= 2) return "A";
+      if (v >= 1.5) return "B";
+      if (v >= 1) return "C";
+      return "D";
+    }
+    function setGrade(id, grade) {
+      const node = el(id);
+      node.textContent = grade;
+      node.className = "grade " + grade;
+    }
+
+    function calculate() {
+      const structure = STRUCTURE_RULES[el("structure").value] || STRUCTURE_RULES.wood;
+      const price = num("priceMan") * 10000;
+      const loanRatio = num("loanRatio") / 100;
+      const grossYield = num("grossYield") / 100;
+      const buildingAreaSqm = num("buildingAreaSqm");
+      const tsubo = buildingAreaSqm / 3.305785;
+      const effectiveRate = structure.effectiveRate / 100;
+      const rentableAreaSqm = buildingAreaSqm * effectiveRate;
+      const rentableTsubo = rentableAreaSqm / 3.305785;
+      const age = getFiscalAge(num("buildYear"), num("buildMonth"));
+      const remainingUsefulLife = Math.max(0, structure.loanBaseYears - age);
+      const loanYears = Math.max(10, remainingUsefulLife);
+
+      const fullRent = price * grossYield;
+      const vacancyRate = num("vacancyRate") / 100;
+      const rentIncome = fullRent * (1 - vacancyRate);
+      const vacancyLoss = fullRent - rentIncome;
+      const totalIncome = rentIncome;
+
+      const constructionCostTsubo = num("constructionCostTsubo", structure.constructionCostTsubo);
+      const replacementCost = tsubo * constructionCostTsubo;
+      const propertyMgmtFee = rentIncome * num("propertyMgmtFeeRate") / 100;
+      const buildingMgmtFee = tsubo * num("buildingMgmtTsuboMonthly") * 12;
+      const utilityFee = tsubo * num("utilityTsuboMonthly") * 12;
+      const insurance = replacementCost * num("insuranceRate") / 100;
+      const propertyTax = rentIncome * num("propertyTaxRate") / 100;
+      const repair = replacementCost * num("repairRate") / 100;
+      const restoration = rentableTsubo * num("restorationTsubo") * num("turnoverRate") / 100 * (1 - vacancyRate);
+      const monthlyRent = rentIncome / 12;
+      const monthlyRentTsubo = rentableTsubo > 0 ? monthlyRent / rentableTsubo : 0;
+      const adCost = monthlyRent * num("adMonths") * num("turnoverRate") / 100;
+      const otherCost = num("otherCost");
+      const totalCost = propertyMgmtFee + buildingMgmtFee + utilityFee + insurance + propertyTax + repair + restoration + adCost + otherCost;
+
+      const noi = totalIncome - totalCost;
+      const monthlyNoi = noi / 12;
+      const actualYield = price > 0 ? noi / price * 100 : 0;
+
+      const loanAmount = price * loanRatio;
+      const monthlyDebt = monthlyPayment(loanAmount, num("interestRate"), loanYears);
+      const annualDebt = monthlyDebt * 12;
+      const totalDebt = annualDebt * loanYears;
+      const cf = noi - annualDebt;
+      const repaymentRatio = rentIncome > 0 ? annualDebt / rentIncome * 100 : 0;
+      const cfRate = price > 0 ? cf / price * 100 : 0;
+      const selfFund = price * (1 - loanRatio) + price * num("costRatio") / 100;
+      const ccr = selfFund > 0 ? cf / selfFund * 100 : 0;
+      const cf3Target = cf < price * 0.03 ? (price * 0.03 - cf) / 10000 : 0;
+
+      const buildingValue = price * num("buildingRatio") / 100;
+      const landValue = price - buildingValue;
+      const depreciationYears = Math.max(1, remainingUsefulLife + age * 0.2);
+      const depreciation = buildingValue / depreciationYears;
+      const taxableIncomeAfterDep = noi - depreciation;
+      const afterTaxProfit = taxableIncomeAfterDep * (1 - num("taxRate") / 100);
+
+      el("cf").textContent = fmtYen(cf) + "/年";
+      setGrade("cfGrade", cf >= 0 ? "D" : "D");
+      el("ccr").textContent = fmtPct(ccr);
+      el("selfFund").textContent = "自己資金 " + fmtYen(selfFund);
+      setGrade("ccrGrade", gradeCCR(ccr));
+      el("repaymentRatio").textContent = fmtPct(repaymentRatio);
+      setGrade("repaymentGrade", gradeRepayment(repaymentRatio));
+      el("cfRate").textContent = fmtPct(cfRate);
+      setGrade("cfRateGrade", gradeCFRate(cfRate));
+
+      el("priceInfo").textContent = fmtMan(price);
+      el("loanInfo").textContent = fmtMan(loanAmount);
+      el("ageInfo").textContent = age + "年";
+      el("remainingInfo").textContent = remainingUsefulLife + "年";
+      el("loanYearsInfo").textContent = loanYears + "年";
+      el("structureInfo").textContent = structure.label;
+      el("effectiveInfo").textContent = structure.effectiveRate + "%";
+      el("rentableAreaInfo").textContent = Math.round(rentableAreaSqm).toLocaleString("ja-JP") + "㎡";
+      el("cf3TargetInfo").textContent = cf3Target > 0 ? Math.round(cf3Target).toLocaleString("ja-JP") + "万円" : "達成";
+
+      el("monthlyDebt").textContent = fmtYen(monthlyDebt);
+      el("annualDebt").textContent = fmtYen(annualDebt);
+      el("totalDebt").textContent = fmtYen(totalDebt);
+      el("actualYield").textContent = fmtPct(actualYield);
+      el("noi").textContent = fmtYen(noi);
+      el("monthlyNoi").textContent = fmtYen(monthlyNoi);
+      el("fullRent").textContent = fmtYen(fullRent);
+      el("rentIncome").textContent = fmtYen(rentIncome);
+      el("vacancyLoss").textContent = "-" + fmtYen(vacancyLoss);
+      el("monthlyRentTsubo").textContent = fmtYen(monthlyRentTsubo);
+
+      el("totalCost").textContent = fmtYen(totalCost);
+      el("propertyMgmtFee").textContent = fmtYen(propertyMgmtFee);
+      el("buildingMgmtFee").textContent = fmtYen(buildingMgmtFee);
+      el("utilityFee").textContent = fmtYen(utilityFee);
+      el("insurance").textContent = fmtYen(insurance);
+      el("propertyTax").textContent = fmtYen(propertyTax);
+      el("repair").textContent = fmtYen(repair);
+      el("restoration").textContent = fmtYen(restoration);
+      el("adCost").textContent = fmtYen(adCost);
+      el("otherCostOut").textContent = fmtYen(otherCost);
+
+      el("landValue").textContent = fmtYen(landValue);
+      el("buildingValue").textContent = fmtYen(buildingValue);
+      el("depreciationYears").textContent = depreciationYears.toFixed(1) + "年";
+      el("depreciation").textContent = fmtYen(depreciation);
+      el("taxableIncomeAfterDep").textContent = fmtYen(taxableIncomeAfterDep);
+      el("afterTaxProfit").textContent = fmtYen(afterTaxProfit);
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        btn.classList.add("active");
+        el(btn.dataset.tab).classList.add("active");
+        calculate();
+      });
+    });
+
+    el("advancedToggle").addEventListener("click", () => {
+      el("advanced").classList.toggle("open");
+      el("toggleMark").textContent = el("advanced").classList.contains("open") ? "−" : "＋";
+    });
+
+    el("structure").addEventListener("change", () => {
+      const d = STRUCTURE_RULES[el("structure").value] || STRUCTURE_RULES.wood;
+      el("constructionCostTsubo").value = d.constructionCostTsubo;
+      calculate();
+    });
+
+    el("sampleBtn").addEventListener("click", () => {
+      const values = {
+        priceMan: 5000, loanRatio: 90, grossYield: 6, structure: "wood", buildYear: 2006, buildMonth: 5, buildingAreaSqm: 150,
+        interestRate: 2, costRatio: 7, vacancyRate: 5, propertyMgmtFeeRate: 5.5, buildingMgmtTsuboMonthly: 200,
+        utilityTsuboMonthly: 50, constructionCostTsubo: 550000, insuranceRate: 0.3, propertyTaxRate: 10, repairRate: 0.5,
+        restorationTsubo: 10000, turnoverRate: 25, adMonths: 1, otherCost: 0, taxRate: 20, buildingRatio: 70
+      };
+      Object.entries(values).forEach(([key, value]) => { el(key).value = value; });
+      calculate();
+    });
+
+    ids.forEach(id => el(id).addEventListener("input", calculate));
+    calculate();
+  </script>
+</body>
+</html>
