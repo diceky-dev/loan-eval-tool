@@ -58,7 +58,7 @@
     .sub { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
     .tabs {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 4px;
       background: white;
       border: 1px solid var(--border);
@@ -199,6 +199,7 @@
       <button class="tab-btn active" data-tab="input">入力</button>
       <button class="tab-btn" data-tab="result">結果</button>
       <button class="tab-btn" data-tab="detail">内訳</button>
+      <button class="tab-btn" data-tab="simulation">詳細</button>
     </nav>
 
     <section id="input" class="tab active">
@@ -276,7 +277,11 @@
             <div class="field"><label>原状回復 坪単価</label><div class="control"><input id="restorationTsubo" type="number" value="10000"><span class="unit">円</span></div></div>
             <div class="field"><label>回転率</label><div class="control"><input id="turnoverRate" type="number" value="25" step="0.1"><span class="unit">%</span></div></div>
             <div class="field"><label>募集AD</label><div class="control"><input id="adMonths" type="number" value="1" step="0.1"><span class="unit">ヶ月</span></div></div>
+            <div class="field"><label>大規模修繕積立</label><div class="control"><input id="largeRepairReserve" type="number" value="0" inputmode="decimal"><span class="unit">円/年</span></div></div>
             <div class="field"><label>その他費用</label><div class="control"><input id="otherCost" type="number" value="0"><span class="unit">円</span></div></div>
+            <div class="field"><label>年間賃料下落率</label><div class="control"><input id="annualRentDecline" type="number" value="1" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>費用上昇率</label><div class="control"><input id="expenseInflation" type="number" value="1" step="0.1"><span class="unit">%</span></div></div>
+            <div class="field"><label>詳細シミュレーション期間</label><div class="control"><input id="simulationYears" type="number" value="10" inputmode="numeric"><span class="unit">年</span></div></div>
             <div class="field"><label>税率</label><div class="control"><input id="taxRate" type="number" value="20" step="0.1"><span class="unit">%</span></div></div>
             <div class="field"><label>建物割合</label><div class="control"><input id="buildingRatio" type="number" value="70" step="0.1"><span class="unit">%</span></div></div>
           </div>
@@ -335,6 +340,7 @@
         <div class="row"><span class="label">災害保険</span><span class="value" id="insurance"></span></div>
         <div class="row"><span class="label">固定資産税・都市計画税</span><span class="value" id="propertyTax"></span></div>
         <div class="row"><span class="label">修繕費</span><span class="value" id="repair"></span></div>
+        <div class="row"><span class="label">大規模修繕積立</span><span class="value" id="largeRepairReserveOut"></span></div>
         <div class="row"><span class="label">原状回復費</span><span class="value" id="restoration"></span></div>
         <div class="row"><span class="label">募集経費</span><span class="value" id="adCost"></span></div>
         <div class="row"><span class="label">その他</span><span class="value" id="otherCostOut"></span></div>
@@ -351,6 +357,27 @@
         <p class="small">※元サイトの「税引き後CF」はサンプル上NaN表示のため、このアプリでは参考表示に留めています。</p>
       </div>
     </section>
+
+    <section id="simulation" class="tab">
+      <div class="card">
+        <h2>買付判断用シミュレーション</h2>
+        <p class="note">詳細前提の「年間賃料下落率」「費用上昇率」「大規模修繕積立」「シミュレーション期間」を使って、年次CFをざっくり確認します。</p>
+      </div>
+      <div class="card info-grid">
+        <div><div class="label">初年CF</div><div class="value" id="simFirstCf"></div></div>
+        <div><div class="label">最終年CF</div><div class="value" id="simLastCf"></div></div>
+        <div><div class="label">累積CF</div><div class="value" id="simCumulativeCf"></div></div>
+        <div><div class="label">累積CF率</div><div class="value" id="simCumulativeCfRate"></div></div>
+      </div>
+      <div class="card">
+        <h2>収益・費用・CF</h2>
+        <canvas id="annualChart" width="420" height="260" style="width:100%;max-width:100%;"></canvas>
+      </div>
+      <div class="card">
+        <h2>累積CF</h2>
+        <canvas id="cumulativeChart" width="420" height="220" style="width:100%;max-width:100%;"></canvas>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -365,7 +392,7 @@
     const ids = [
       "priceMan","loanRatio","grossYield","structure","buildYear","buildMonth","buildingAreaSqm","interestRate","costRatio","loanYearsOverride","vacancyRate",
       "propertyMgmtFeeRate","buildingMgmtTsuboMonthly","utilityTsuboMonthly","constructionCostTsubo","insuranceRate","propertyTaxRate","repairRate",
-      "restorationTsubo","turnoverRate","adMonths","otherCost","taxRate","buildingRatio"
+      "restorationTsubo","turnoverRate","adMonths","largeRepairReserve","otherCost","annualRentDecline","expenseInflation","simulationYears","taxRate","buildingRatio"
     ];
 
     function el(id) { return document.getElementById(id); }
@@ -453,8 +480,9 @@
       const monthlyRent = rentIncome / 12;
       const monthlyRentTsubo = rentableTsubo > 0 ? monthlyRent / rentableTsubo : 0;
       const adCost = monthlyRent * num("adMonths") * num("turnoverRate") / 100;
+      const largeRepairReserve = num("largeRepairReserve");
       const otherCost = num("otherCost");
-      const totalCost = propertyMgmtFee + buildingMgmtFee + utilityFee + insurance + propertyTax + repair + restoration + adCost + otherCost;
+      const totalCost = propertyMgmtFee + buildingMgmtFee + utilityFee + insurance + propertyTax + repair + largeRepairReserve + restoration + adCost + otherCost;
 
       const noi = totalIncome - totalCost;
       const monthlyNoi = noi / 12;
@@ -516,6 +544,7 @@
       el("insurance").textContent = fmtYen(insurance);
       el("propertyTax").textContent = fmtYen(propertyTax);
       el("repair").textContent = fmtYen(repair);
+      el("largeRepairReserveOut").textContent = fmtYen(largeRepairReserve);
       el("restoration").textContent = fmtYen(restoration);
       el("adCost").textContent = fmtYen(adCost);
       el("otherCostOut").textContent = fmtYen(otherCost);
@@ -526,6 +555,109 @@
       el("depreciation").textContent = fmtYen(depreciation);
       el("taxableIncomeAfterDep").textContent = fmtYen(taxableIncomeAfterDep);
       el("afterTaxProfit").textContent = fmtYen(afterTaxProfit);
+
+      drawSimulation({
+        price, rentIncome, propertyMgmtFee, buildingMgmtFee, utilityFee, insurance, propertyTax, repair,
+        largeRepairReserve, restoration, adCost, otherCost, annualDebt
+      });
+    }
+
+    function drawSimulation(base) {
+      const years = Math.max(1, Math.min(50, Math.round(num("simulationYears", 10))));
+      const rentDecline = num("annualRentDecline") / 100;
+      const expenseInflation = num("expenseInflation") / 100;
+      const rows = [];
+      let cumulative = 0;
+      for (let i = 0; i < years; i++) {
+        const incomeFactor = Math.pow(1 - rentDecline, i);
+        const expenseFactor = Math.pow(1 + expenseInflation, i);
+        const income = base.rentIncome * incomeFactor;
+        const incomeLinkedCosts = (base.propertyMgmtFee + base.propertyTax + base.adCost) * incomeFactor;
+        const areaCosts = (base.buildingMgmtFee + base.utilityFee + base.insurance + base.repair + base.largeRepairReserve + base.restoration + base.otherCost) * expenseFactor;
+        const cost = incomeLinkedCosts + areaCosts;
+        const cf = income - cost - base.annualDebt;
+        cumulative += cf;
+        rows.push({ year: i + 1, income, cost, debt: base.annualDebt, cf, cumulative });
+      }
+      const first = rows[0];
+      const last = rows[rows.length - 1];
+      el("simFirstCf").textContent = fmtYen(first.cf);
+      el("simLastCf").textContent = fmtYen(last.cf);
+      el("simCumulativeCf").textContent = fmtYen(last.cumulative);
+      el("simCumulativeCfRate").textContent = fmtPct(base.price > 0 ? last.cumulative / base.price * 100 : 0);
+      drawAnnualChart(el("annualChart"), rows);
+      drawCumulativeChart(el("cumulativeChart"), rows);
+    }
+
+    function drawAxes(ctx, w, h, pad) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad, pad);
+      ctx.lineTo(pad, h - pad);
+      ctx.lineTo(w - pad, h - pad);
+      ctx.stroke();
+    }
+
+    function drawAnnualChart(canvas, rows) {
+      if (!canvas || !rows.length) return;
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width, h = canvas.height, pad = 34;
+      drawAxes(ctx, w, h, pad);
+      const maxVal = Math.max(...rows.flatMap(r => [r.income, r.cost + r.debt, Math.abs(r.cf)]), 1);
+      const barW = Math.max(4, (w - pad * 2) / rows.length / 4);
+      rows.forEach((r, i) => {
+        const x = pad + (i + 0.5) * (w - pad * 2) / rows.length;
+        const incomeH = r.income / maxVal * (h - pad * 2);
+        const outH = (r.cost + r.debt) / maxVal * (h - pad * 2);
+        const cfH = Math.abs(r.cf) / maxVal * (h - pad * 2);
+        ctx.fillStyle = "#cbd5e1";
+        ctx.fillRect(x - barW * 1.6, h - pad - incomeH, barW, incomeH);
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillRect(x - barW * 0.4, h - pad - outH, barW, outH);
+        ctx.fillStyle = r.cf >= 0 ? "#86efac" : "#fda4af";
+        ctx.fillRect(x + barW * 0.8, h - pad - cfH, barW, cfH);
+      });
+      ctx.fillStyle = "#64748b";
+      ctx.font = "12px system-ui";
+      ctx.fillText("収益", pad, 16);
+      ctx.fillText("費用+返済", pad + 42, 16);
+      ctx.fillText("CF", pad + 112, 16);
+      ctx.fillText("1年", pad, h - 8);
+      ctx.fillText(rows.length + "年", w - pad - 28, h - 8);
+    }
+
+    function drawCumulativeChart(canvas, rows) {
+      if (!canvas || !rows.length) return;
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width, h = canvas.height, pad = 34;
+      drawAxes(ctx, w, h, pad);
+      const vals = rows.map(r => r.cumulative);
+      const minVal = Math.min(...vals, 0);
+      const maxVal = Math.max(...vals, 0);
+      const span = Math.max(1, maxVal - minVal);
+      const y = v => h - pad - (v - minVal) / span * (h - pad * 2);
+      const x = i => pad + i * (w - pad * 2) / Math.max(1, rows.length - 1);
+      const zeroY = y(0);
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.beginPath();
+      ctx.moveTo(pad, zeroY);
+      ctx.lineTo(w - pad, zeroY);
+      ctx.stroke();
+      ctx.strokeStyle = rows[rows.length - 1].cumulative >= 0 ? "#22c55e" : "#e11d48";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      rows.forEach((r, i) => {
+        if (i === 0) ctx.moveTo(x(i), y(r.cumulative));
+        else ctx.lineTo(x(i), y(r.cumulative));
+      });
+      ctx.stroke();
+      ctx.fillStyle = "#64748b";
+      ctx.font = "12px system-ui";
+      ctx.fillText("累積CF", pad, 16);
+      ctx.fillText("1年", pad, h - 8);
+      ctx.fillText(rows.length + "年", w - pad - 28, h - 8);
     }
 
     document.querySelectorAll(".tab-btn").forEach(btn => {
