@@ -178,6 +178,24 @@
       border-color: #fde68a;
     }
     .small { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .chart-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+    .chart-controls .btn { padding: 8px 10px; font-size: 13px; }
+    .chart-zoom-label { font-size: 12px; color: var(--muted); font-weight: 800; min-width: 52px; text-align: center; }
+    .chart-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 8px;
+      background: #fff;
+    }
+    .chart-scroll canvas { display: block; max-width: none !important; }
     @media (max-width: 360px) {
       .grid3 { grid-template-columns: 1fr; }
       .grid2 { grid-template-columns: 1fr; }
@@ -371,7 +389,14 @@
       </div>
       <div class="card">
         <h2>CF推移グラフ</h2>
-        <canvas id="combinedChart" width="420" height="300" style="width:100%;max-width:100%;"></canvas>
+        <div class="chart-controls">
+          <button class="btn" id="chartZoomOut" type="button">− 縮小</button>
+          <span class="chart-zoom-label" id="chartZoomLabel">100%</span>
+          <button class="btn" id="chartZoomIn" type="button">＋ 拡大</button>
+        </div>
+        <div class="chart-scroll" id="chartScroll">
+          <canvas id="combinedChart" width="420" height="300"></canvas>
+        </div>
       </div>
     </section>
   </div>
@@ -384,6 +409,8 @@
       rc: { label: "RC", loanBaseYears: 47, effectiveRate: 80, constructionCostTsubo: 760000 },
       src: { label: "SRC", loanBaseYears: 47, effectiveRate: 80, constructionCostTsubo: 760000 },
     };
+
+    let chartZoom = 1;
 
     const ids = [
       "priceMan","loanRatio","grossYield","structure","buildYear","buildMonth","buildingAreaSqm","interestRate","costRatio","loanYearsOverride","vacancyRate",
@@ -601,6 +628,12 @@
 
     function drawCombinedChart(canvas, rows) {
       if (!canvas || !rows.length) return;
+      const baseWidth = Math.max(420, rows.length * 22 + 90);
+      canvas.width = Math.round(baseWidth * chartZoom);
+      canvas.height = 300;
+      canvas.style.width = canvas.width + "px";
+      canvas.style.height = "300px";
+      el("chartZoomLabel").textContent = Math.round(chartZoom * 100) + "%";
       const ctx = canvas.getContext("2d");
       const w = canvas.width, h = canvas.height, padL = 44, padR = 18, padT = 34, padB = 34;
       ctx.clearRect(0, 0, w, h);
@@ -697,6 +730,16 @@
     el("structure").addEventListener("change", () => {
       const d = STRUCTURE_RULES[el("structure").value] || STRUCTURE_RULES.wood;
       el("constructionCostTsubo").value = d.constructionCostTsubo;
+      calculate();
+    });
+
+    el("chartZoomIn").addEventListener("click", () => {
+      chartZoom = Math.min(3, Math.round((chartZoom + 0.25) * 100) / 100);
+      calculate();
+    });
+
+    el("chartZoomOut").addEventListener("click", () => {
+      chartZoom = Math.max(0.75, Math.round((chartZoom - 0.25) * 100) / 100);
       calculate();
     });
 
